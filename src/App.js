@@ -137,46 +137,28 @@ const predictEntities = async () => {
     const result = await client.predict("/predict", { text: inputText });
     
     console.log('Full result:', result);
-    console.log('result.data:', result.data);
-    console.log('result.data[0]:', result.data[0]);
-    console.log('Type of result.data[0]:', typeof result.data[0]);
     
-    // Handle different possible response formats
-    let entities = [];
-    
-    // Format 1: result.data is the array directly
-    if (Array.isArray(result.data) && result.data.length > 0) {
-      const firstItem = result.data[0];
+    // Correct path: result.data[0].data contains the entities
+    if (result?.data?.[0]?.data && Array.isArray(result.data[0].data)) {
+      const entities = result.data[0].data.map(([text, type]) => ({
+        text: text,
+        type: type
+      }));
       
-      // Check if it's an array of arrays
-      if (Array.isArray(firstItem)) {
-        entities = firstItem.map(([text, type]) => ({ text, type }));
+      console.log('Extracted entities:', entities);
+      setPredictedEntities(entities);
+      
+      if (entities.length === 0) {
+        alert('No entities detected in the text');
       }
-      // Check if result.data itself contains the entity pairs
-      else if (Array.isArray(result.data) && result.data.every(item => Array.isArray(item) && item.length === 2)) {
-        entities = result.data.map(([text, type]) => ({ text, type }));
-      }
-    }
-    
-    // Format 2: Check result directly
-    if (entities.length === 0 && result.data) {
-      console.log('Trying alternative format...');
-      // Sometimes Gradio returns nested differently
-      if (result.data.data && Array.isArray(result.data.data)) {
-        entities = result.data.data.map(([text, type]) => ({ text, type }));
-      }
-    }
-    
-    console.log('Final entities:', entities);
-    setPredictedEntities(entities);
-    
-    if (entities.length === 0) {
-      alert('No entities detected. Check console for response format.');
+    } else {
+      console.log('No entities found in response');
+      setPredictedEntities([]);
     }
     
   } catch (error) {
     console.error('Prediction error:', error);
-    alert(`Error: ${error.message}`);
+    alert(`Prediction failed: ${error.message}`);
     setPredictedEntities([]);
   } finally {
     setIsProcessing(false);
