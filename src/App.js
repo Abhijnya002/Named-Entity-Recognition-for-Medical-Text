@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Activity, Target, TrendingUp, Database, Cpu, CheckCircle, Send, Stethoscope, AlertCircle } from 'lucide-react';
 import './App.css';
-import config from './config';
+import { Client } from "@gradio/client";
+
 
 const HealthcareNERDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -127,70 +128,42 @@ useEffect(() => {
 
  // Predict entities function
 const predictEntities = async () => {
-  if (!inputText.trim()) return;
-  
-  setIsProcessing(true);
-  
-  try {
-    // Step 1: Call the predict endpoint
-    const response = await fetch('https://abhij017-ner-api.hf.space/call/predict', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        data: [inputText]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    // Step 2: Get the event ID from response
-    const eventData = await response.json();
-    const eventId = eventData.event_id;
-
-    // Step 3: Listen to the streaming results
-    const resultResponse = await fetch(`https://abhij017-ner-api.hf.space/call/predict/${eventId}`);
+    if (!inputText.trim()) return;
     
-    const reader = resultResponse.body.getReader();
-    const decoder = new TextDecoder();
-    let result = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      result += decoder.decode(value, { stream: true });
-    }
-
-    // Step 4: Parse the last data event
-    const lines = result.split('\n').filter(line => line.startsWith('data: '));
-    if (lines.length > 0) {
-      const lastLine = lines[lines.length - 1];
-      const jsonData = JSON.parse(lastLine.replace('data: ', ''));
+    setIsProcessing(true);
+    
+    try {
+      // Connect to your Hugging Face Space
+      const client = await Client.connect("abhij017/ner-api");
       
-      console.log('API Response:', jsonData);
-
-      if (jsonData && Array.isArray(jsonData) && jsonData.length > 0) {
-        const entities = jsonData[0].map(([text, type]) => ({
+      // Call the predict function
+      const result = await client.predict("/predict", { 
+        text: inputText 
+      });
+      
+      console.log('Gradio Client Result:', result);
+      
+      // Extract entities from result
+      // Gradio client returns: { data: [[[entity, type], [entity, type]]] }
+      if (result && result.data && result.data[0]) {
+        const entities = result.data[0].map(([text, type]) => ({
           text: text,
           type: type
         }));
         setPredictedEntities(entities);
       } else {
+        console.log('No entities found in result');
         setPredictedEntities([]);
       }
+      
+    } catch (error) {
+      console.error('Prediction error:', error);
+      alert(`Failed to get prediction.\n\nError: ${error.message}\n\nMake sure your Hugging Face Space is running.`);
+      setPredictedEntities([]);
+    } finally {
+      setIsProcessing(false);
     }
-
-  } catch (error) {
-    console.error('Prediction error:', error);
-    alert(`API connection failed: ${error.message}\n\nPlease check that your Hugging Face Space is running.`);
-    setPredictedEntities([]);
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
   const exampleTexts = [
     'Patient diagnosed with diabetes mellitus and prescribed metformin 500mg twice daily.',
     'Aspirin and warfarin are anticoagulants used to prevent blood clots.',
