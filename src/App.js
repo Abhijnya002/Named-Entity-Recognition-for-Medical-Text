@@ -128,42 +128,60 @@ useEffect(() => {
 
  // Predict entities function
 const predictEntities = async () => {
-    if (!inputText.trim()) return;
+  if (!inputText.trim()) return;
+  
+  setIsProcessing(true);
+  
+  try {
+    const client = await Client.connect("abhij017/ner-api");
+    const result = await client.predict("/predict", { text: inputText });
     
-    setIsProcessing(true);
+    console.log('Full result:', result);
+    console.log('result.data:', result.data);
+    console.log('result.data[0]:', result.data[0]);
+    console.log('Type of result.data[0]:', typeof result.data[0]);
     
-    try {
-      // Connect to your Hugging Face Space
-      const client = await Client.connect("abhij017/ner-api");
+    // Handle different possible response formats
+    let entities = [];
+    
+    // Format 1: result.data is the array directly
+    if (Array.isArray(result.data) && result.data.length > 0) {
+      const firstItem = result.data[0];
       
-      // Call the predict function
-      const result = await client.predict("/predict", { 
-        text: inputText 
-      });
-      
-      console.log('Gradio Client Result:', result);
-      
-      // Extract entities from result
-      // Gradio client returns: { data: [[[entity, type], [entity, type]]] }
-      if (result && result.data && result.data[0]) {
-        const entities = result.data[0].map(([text, type]) => ({
-          text: text,
-          type: type
-        }));
-        setPredictedEntities(entities);
-      } else {
-        console.log('No entities found in result');
-        setPredictedEntities([]);
+      // Check if it's an array of arrays
+      if (Array.isArray(firstItem)) {
+        entities = firstItem.map(([text, type]) => ({ text, type }));
       }
-      
-    } catch (error) {
-      console.error('Prediction error:', error);
-      alert(`Failed to get prediction.\n\nError: ${error.message}\n\nMake sure your Hugging Face Space is running.`);
-      setPredictedEntities([]);
-    } finally {
-      setIsProcessing(false);
+      // Check if result.data itself contains the entity pairs
+      else if (Array.isArray(result.data) && result.data.every(item => Array.isArray(item) && item.length === 2)) {
+        entities = result.data.map(([text, type]) => ({ text, type }));
+      }
     }
-  };
+    
+    // Format 2: Check result directly
+    if (entities.length === 0 && result.data) {
+      console.log('Trying alternative format...');
+      // Sometimes Gradio returns nested differently
+      if (result.data.data && Array.isArray(result.data.data)) {
+        entities = result.data.data.map(([text, type]) => ({ text, type }));
+      }
+    }
+    
+    console.log('Final entities:', entities);
+    setPredictedEntities(entities);
+    
+    if (entities.length === 0) {
+      alert('No entities detected. Check console for response format.');
+    }
+    
+  } catch (error) {
+    console.error('Prediction error:', error);
+    alert(`Error: ${error.message}`);
+    setPredictedEntities([]);
+  } finally {
+    setIsProcessing(false);
+  }
+};
   const exampleTexts = [
     'Patient diagnosed with diabetes mellitus and prescribed metformin 500mg twice daily.',
     'Aspirin and warfarin are anticoagulants used to prevent blood clots.',
