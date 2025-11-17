@@ -121,22 +121,7 @@ const predictEntities = async () => {
     setIsProcessing(false);
   }
 };
-  const handlePredict = async () => {
-  try {
-    const response = await fetch(`${config.API_URL}/predict`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ text: inputText })
-    });
-    
-    const data = await response.json();
-    setEntities(data.entities);
-  } catch (error) {
-    console.error('Error:', error);
-  }
-};
+  
 
 
   const exampleTexts = [
