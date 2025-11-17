@@ -132,38 +132,60 @@ const predictEntities = async () => {
   setIsProcessing(true);
   
   try {
-    // Correct Hugging Face Gradio API format
-    const response = await fetch('https://abhij017-ner-api.hf.space/run/predict', {
+    // Step 1: Call the predict endpoint
+    const response = await fetch('https://abhij017-ner-api.hf.space/call/predict', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        data: [inputText]  // Gradio expects data as array
+        data: [inputText]
       })
     });
-    
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
+
+    // Step 2: Get the event ID from response
+    const eventData = await response.json();
+    const eventId = eventData.event_id;
+
+    // Step 3: Listen to the streaming results
+    const resultResponse = await fetch(`https://abhij017-ner-api.hf.space/call/predict/${eventId}`);
     
-    const result = await response.json();
-    console.log('API Response:', result);  // Debug log
-    
-    // Gradio returns: {data: [[["entity1", "type1"], ["entity2", "type2"]]]}
-    if (result.data && result.data[0] && Array.isArray(result.data[0])) {
-      const entities = result.data[0].map(([text, type]) => ({
-        text: text,
-        type: type
-      }));
-      setPredictedEntities(entities);
-    } else {
-      console.log('No entities found');
-      setPredictedEntities([]);
+    const reader = resultResponse.body.getReader();
+    const decoder = new TextDecoder();
+    let result = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result += decoder.decode(value, { stream: true });
     }
+
+    // Step 4: Parse the last data event
+    const lines = result.split('\n').filter(line => line.startsWith('data: '));
+    if (lines.length > 0) {
+      const lastLine = lines[lines.length - 1];
+      const jsonData = JSON.parse(lastLine.replace('data: ', ''));
+      
+      console.log('API Response:', jsonData);
+
+      if (jsonData && Array.isArray(jsonData) && jsonData.length > 0) {
+        const entities = jsonData[0].map(([text, type]) => ({
+          text: text,
+          type: type
+        }));
+        setPredictedEntities(entities);
+      } else {
+        setPredictedEntities([]);
+      }
+    }
+
   } catch (error) {
     console.error('Prediction error:', error);
-    alert(`API Error: ${error.message}\n\nMake sure your Hugging Face Space is running at: https://huggingface.co/spaces/abhij017/ner-api`);
+    alert(`API connection failed: ${error.message}\n\nPlease check that your Hugging Face Space is running.`);
     setPredictedEntities([]);
   } finally {
     setIsProcessing(false);
