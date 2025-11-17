@@ -14,16 +14,49 @@ const HealthcareNERDashboard = () => {
 
 // Load metrics from API on mount
 useEffect(() => {
-  fetch(`${config.API_URL}/metrics`)
-    .then(response => response.json())
-    .then(data => {
-      setMetricsData(data);
-      setLoading(false);
-    })
-    .catch(error => {
-      console.error('Failed to load metrics:', error);
-      setLoading(false);
-    });
+  const metrics = {
+    overall: {
+      precision: 0.8175,
+      recall: 0.8882,
+      f1_score: 0.8514
+    },
+    chemical: {
+      precision: 0.8762,
+      recall: 0.9199,
+      f1_score: 0.8975,
+      support: 5379
+    },
+    disease: {
+      precision: 0.7511,
+      recall: 0.8496,
+      f1_score: 0.7974,
+      support: 4423
+    },
+    entity_distribution: {
+      chemical: 361,
+      disease: 252
+    },
+    training_progress: [
+      { epoch: 1, train_loss: 1.2097, val_loss: 1.4253 },
+      { epoch: 2, train_loss: 0.5181, val_loss: 0.5524 },
+      { epoch: 3, train_loss: 0.4572, val_loss: 0.5524 },
+      { epoch: 4, train_loss: 0.4469, val_loss: 0.4426 },
+      { epoch: 5, train_loss: 0.4476, val_loss: 0.4222 },
+      { epoch: 6, train_loss: 0.4440, val_loss: 0.4121 },
+      { epoch: 7, train_loss: 0.4438, val_loss: 0.4121 },
+      { epoch: 8, train_loss: 0.4452, val_loss: 0.4040 },
+      { epoch: 9, train_loss: 0.4471, val_loss: 0.3992 },
+      { epoch: 10, train_loss: 0.4473, val_loss: 0.3992 },
+      { epoch: 11, train_loss: 0.4488, val_loss: 0.3968 },
+      { epoch: 12, train_loss: 0.4482, val_loss: 0.3956 },
+      { epoch: 13, train_loss: 0.4485, val_loss: 0.3946 },
+      { epoch: 14, train_loss: 0.4486, val_loss: 0.3946 },
+      { epoch: 15, train_loss: 0.4497, val_loss: 0.3939 }
+    ]
+  };
+  
+  setMetricsData(metrics);
+  setLoading(false);
 }, []);
 
   if (loading || !metricsData) {
