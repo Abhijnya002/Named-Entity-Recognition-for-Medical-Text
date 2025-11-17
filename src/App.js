@@ -99,19 +99,30 @@ const predictEntities = async () => {
   setIsProcessing(true);
   
   try {
-    const response = await fetch(`${config.API_URL}/predict`, {
+    // Hugging Face Gradio API endpoint
+    const response = await fetch(`${config.API_URL}/api/predict`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: inputText })
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        data: [inputText]  // Gradio expects data as array
+      })
     });
     
     if (!response.ok) throw new Error('API request failed');
     
-    const data = await response.json();
-    if (data.success) {
-      setPredictedEntities(data.entities);
+    const result = await response.json();
+    
+    // Gradio returns data in format: {data: [[["entity1", "type1"], ["entity2", "type2"]]]}
+    if (result.data && result.data[0]) {
+      const entities = result.data[0].map(([text, type]) => ({
+        text: text,
+        type: type
+      }));
+      setPredictedEntities(entities);
     } else {
-      throw new Error(data.error || 'Prediction failed');
+      setPredictedEntities([]);
     }
   } catch (error) {
     console.error('Prediction error:', error);
@@ -121,9 +132,6 @@ const predictEntities = async () => {
     setIsProcessing(false);
   }
 };
-  
-
-
   const exampleTexts = [
     'Patient diagnosed with diabetes mellitus and prescribed metformin 500mg twice daily.',
     'Aspirin and warfarin are anticoagulants used to prevent blood clots.',
