@@ -133,7 +133,7 @@ const predictEntities = async () => {
   
   try {
     // Correct Hugging Face Gradio API format
-    const response = await fetch('https://abhij017-ner-api.hf.space/api/predict', {
+    const response = await fetch('https://abhij017-ner-api.hf.space/run/predict', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json'
