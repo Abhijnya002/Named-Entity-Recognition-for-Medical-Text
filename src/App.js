@@ -12,19 +12,19 @@ const HealthcareNERDashboard = () => {
   const [metricsData, setMetricsData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load metrics from API on mount
-  useEffect(() => {
-    fetch('http://localhost:8000/metrics')
-      .then(response => response.json())
-      .then(data => {
-        setMetricsData(data);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Failed to load metrics:', error);
-        setLoading(false);
-      });
-  }, []);
+// Load metrics from API on mount
+useEffect(() => {
+  fetch(`${config.API_URL}/metrics`)
+    .then(response => response.json())
+    .then(data => {
+      setMetricsData(data);
+      setLoading(false);
+    })
+    .catch(error => {
+      console.error('Failed to load metrics:', error);
+      setLoading(false);
+    });
+}, []);
 
   if (loading || !metricsData) {
     return (
@@ -92,33 +92,35 @@ const HealthcareNERDashboard = () => {
     { category: 'Boundary Errors', count: 18 }
   ];
 
-  const predictEntities = async (text) => {
-    setIsProcessing(true);
+ // Predict entities function
+const predictEntities = async () => {
+  if (!inputText.trim()) return;
+  
+  setIsProcessing(true);
+  
+  try {
+    const response = await fetch(`${config.API_URL}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: inputText })
+    });
     
-    try {
-      const response = await fetch('http://localhost:8000/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text })
-      });
-      
-      if (!response.ok) throw new Error('API request failed');
-      
-      const data = await response.json();
-      if (data.success) {
-        setPredictedEntities(data.entities);
-      } else {
-        throw new Error(data.error || 'Prediction failed');
-      }
-    } catch (error) {
-      console.error('Prediction error:', error);
-      alert('API connection failed. Make sure Flask server is running on port 8000.');
-      setPredictedEntities([]);
-    } finally {
-      setIsProcessing(false);
+    if (!response.ok) throw new Error('API request failed');
+    
+    const data = await response.json();
+    if (data.success) {
+      setPredictedEntities(data.entities);
+    } else {
+      throw new Error(data.error || 'Prediction failed');
     }
-  };
-
+  } catch (error) {
+    console.error('Prediction error:', error);
+    alert('API connection failed. Please check your backend connection.');
+    setPredictedEntities([]);
+  } finally {
+    setIsProcessing(false);
+  }
+};
   const handlePredict = async () => {
   try {
     const response = await fetch(`${config.API_URL}/predict`, {
@@ -446,10 +448,10 @@ const HealthcareNERDashboard = () => {
               </div>
 
               <button
-                onClick={handlePredict}
-                disabled={!inputText.trim() || isProcessing}
-                className="w-full bg-white text-purple-700 font-bold py-4 px-6 rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex items-center justify-center gap-3 border-2 border-purple-300 hover:bg-purple-50"
-              >
+  onClick={predictEntities}  
+  disabled={!inputText.trim() || isProcessing}
+  className="w-full bg-white text-purple-700 font-bold py-4 px-6 rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex items-center justify-center gap-3 border-2 border-purple-300 hover:bg-purple-50"
+>
                 {isProcessing ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-700"></div>
