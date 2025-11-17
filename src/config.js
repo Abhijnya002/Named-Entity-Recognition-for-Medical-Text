@@ -1,5 +1,5 @@
 const config = {
-  API_URL: process.env.REACT_APP_API_URL || 'https://huggingface.co/spaces/abhij017/ner-api'
+  API_URL: 'https://abhij017-ner-api.hf.space'
 };
 
 export default config;

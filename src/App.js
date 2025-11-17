@@ -132,8 +132,8 @@ const predictEntities = async () => {
   setIsProcessing(true);
   
   try {
-    // Hugging Face Gradio API endpoint
-    const response = await fetch(`${config.API_URL}/api/predict`, {
+    // Correct Hugging Face Gradio API format
+    const response = await fetch('https://abhij017-ner-api.hf.space/api/predict', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json'
@@ -143,23 +143,27 @@ const predictEntities = async () => {
       })
     });
     
-    if (!response.ok) throw new Error('API request failed');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     
     const result = await response.json();
+    console.log('API Response:', result);  // Debug log
     
-    // Gradio returns data in format: {data: [[["entity1", "type1"], ["entity2", "type2"]]]}
-    if (result.data && result.data[0]) {
+    // Gradio returns: {data: [[["entity1", "type1"], ["entity2", "type2"]]]}
+    if (result.data && result.data[0] && Array.isArray(result.data[0])) {
       const entities = result.data[0].map(([text, type]) => ({
         text: text,
         type: type
       }));
       setPredictedEntities(entities);
     } else {
+      console.log('No entities found');
       setPredictedEntities([]);
     }
   } catch (error) {
     console.error('Prediction error:', error);
-    alert('API connection failed. Please check your backend connection.');
+    alert(`API Error: ${error.message}\n\nMake sure your Hugging Face Space is running at: https://huggingface.co/spaces/abhij017/ner-api`);
     setPredictedEntities([]);
   } finally {
     setIsProcessing(false);
